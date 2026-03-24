@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Kitchen Locator</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css?v=1.1">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <header class="sidebar-header">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h1><i class="fa-solid fa-fire-burner" style="color: var(--accent-color);"></i> CloudBite</h1>
+                        <p class="tagline">Find home-cooked cloud kitchens near you</p>
+                    </div>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button id="driver-portal-btn"
+                            style="background:transparent; border:1px solid var(--glass-border); color:var(--text-main); padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer;"
+                            onmouseover="this.style.borderColor='#26de81'"
+                            onmouseout="this.style.borderColor='var(--glass-border)'"><i class="fa-solid fa-motorcycle"
+                                style="color:#26de81;"></i>
+                            Driver</button>
+                        <button id="host-portal-btn"
+                            style="background:transparent; border:1px solid var(--glass-border); color:var(--text-main); padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer;"
+                            onmouseover="this.style.borderColor='var(--accent-color)'"
+                            onmouseout="this.style.borderColor='var(--glass-border)'"><i class="fa-solid fa-user-tie"
+                                style="color:var(--accent-color);"></i>
+                            Host</button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="filters">
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="search-input" placeholder="Search by cuisine or kitchen...">
+                </div>
+
+                <div class="filter-group">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="delivery">Delivery</button>
+                    <button class="filter-btn" data-filter="pickup">Pickup</button>
+                </div>
+            </div>
+
+            <div class="kitchen-list-container">
+                <div class="list-header">
+                    <h2>Nearby Kitchens</h2>
+                    <span id="kitchen-count">0 found</span>
+                </div>
+                <div id="kitchen-list" class="kitchen-list">
+                    <!-- Cards will be populated here by JS -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Map Area -->
+        <main class="map-area" id="main-user-view">
+            <div id="map" class="map-container"></div>
+
+            <!-- Floating Location Info -->
+            <div class="location-pill glass-panel">
+                <i class="fa-solid fa-location-dot"></i>
+                <span id="current-location">Locating...</span>
+            </div>
+        </main>
+    </div>
+
+    <!-- Driver Dashboard View -->
+    <div id="driver-dashboard-view" class="host-dashboard hidden"
+        style="flex: 1; padding: 2rem; overflow-y: auto; background: #0f1115; height: 100vh; position: fixed; top:0; left:0; right:0; z-index: 2000;">
+        <div class="dashboard-header"
+            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+            <h1 id="dashboard-driver-title" style="color:var(--text-main); font-size: 2rem;">Driver Dashboard</h1>
+            <button id="exit-driver-btn" class="checkout-btn"
+                style="width:auto; padding:0.5rem 1.5rem; background:transparent; border:1px solid #ff4757; color:#ff4757;">Exit
+                Portal</button>
+        </div>
+        <div class="dashboard-stats" style="display:flex; gap:1.5rem; margin-bottom:2rem;">
+            <div class="stat-card glass-panel" style="flex:1; padding:1.5rem; text-align:center;">
+                <h3 style="color:var(--text-muted); margin-bottom:0.5rem;">Active Deliveries</h3>
+                <span id="stat-active-deliveries"
+                    style="font-size:2.5rem; font-weight:700; color:var(--text-main);">0</span>
+            </div>
+            <div class="stat-card glass-panel" style="flex:1; padding:1.5rem; text-align:center;">
+                <h3 style="color:var(--text-muted); margin-bottom:0.5rem;">Total Earnings</h3>
+                <span id="stat-driver-revenue" style="font-size:2.5rem; font-weight:700; color:#26de81;">$0.00</span>
+            </div>
+        </div>
+        <h2
+            style="color:var(--text-main); margin-bottom: 1.5rem; border-bottom:1px solid var(--glass-border); padding-bottom:0.5rem;">
+            Pending Orders</h2>
+        <div id="dashboard-deliveries-list" class="dashboard-orders-list"
+            style="display:flex; flex-direction:column; gap:1rem;">
+            <!-- Deliveries injected here -->
+        </div>
+    </div>
+
+    <!-- Host Dashboard View -->
+    <div id="host-dashboard-view" class="host-dashboard hidden"
+        style="flex: 1; padding: 2rem; overflow-y: auto; background: #0f1115; height: 100vh; position: fixed; top:0; left:0; right:0; z-index: 2000;">
+        <div class="dashboard-header"
+            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+            <h1 id="dashboard-host-title" style="color:var(--text-main); font-size: 2rem;">Host Dashboard</h1>
+            <button id="exit-host-btn" class="checkout-btn"
+                style="width:auto; padding:0.5rem 1.5rem; background:transparent; border:1px solid #ff4757; color:#ff4757;">Exit
+                Portal</button>
+        </div>
+        <div class="dashboard-stats" style="display:flex; gap:1.5rem; margin-bottom:2rem;">
+            <div class="stat-card glass-panel" style="flex:1; padding:1.5rem; text-align:center;">
+                <h3 style="color:var(--text-muted); margin-bottom:0.5rem;">Active Orders</h3>
+                <span id="stat-active-orders"
+                    style="font-size:2.5rem; font-weight:700; color:var(--text-main);">0</span>
+            </div>
+            <div class="stat-card glass-panel" style="flex:1; padding:1.5rem; text-align:center;">
+                <h3 style="color:var(--text-muted); margin-bottom:0.5rem;">Total Revenue</h3>
+                <span id="stat-revenue" style="font-size:2.5rem; font-weight:700; color:#26de81;">$0.00</span>
+            </div>
+        </div>
+        <h2
+            style="color:var(--text-main); margin-bottom: 1.5rem; border-bottom:1px solid var(--glass-border); padding-bottom:0.5rem;">
+            Incoming Orders</h2>
+        <div id="dashboard-orders-list" class="dashboard-orders-list"
+            style="display:flex; flex-direction:column; gap:1rem;">
+            <!-- Orders injected here -->
+        </div>
+    </div>
+
+    <!-- Menu Modal -->
+    <div id="menu-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel">
+            <button id="close-modal" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+            <div class="modal-header">
+                <h2 id="modal-kitchen-name">Kitchen Name</h2>
+                <p id="modal-kitchen-cuisine" class="tagline">Cuisine</p>
+            </div>
+            <div class="modal-body" id="modal-menu-list">
+                <!-- Menu items will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Host Profile Modal -->
+    <div id="host-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel">
+            <button id="close-host-modal" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+            <div class="host-header">
+                <img id="host-avatar" src="" alt="Host Avatar" class="host-avatar-large">
+                <div class="host-header-info">
+                    <h2 id="modal-host-name">Host Name</h2>
+                    <span id="modal-host-type" class="host-type-badge"><i class="fa-solid fa-medal"></i> <span
+                            id="modal-host-type-text">Type</span></span>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p id="modal-host-bio" class="host-bio">Host biography goes here...</p>
+                <h3 class="host-section-title">Host's Kitchens</h3>
+                <div id="modal-host-kitchens" class="host-kitchens-list">
+                    <!-- Linked Kitchens injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Cart Button -->
+    <button id="cart-fab" class="cart-fab">
+        <i class="fa-solid fa-cart-shopping"></i>
+        <span id="cart-count" class="cart-count">0</span>
+    </button>
+
+    <!-- Cart Sidebar -->
+    <div id="cart-sidebar" class="cart-sidebar hidden glass-panel">
+        <div class="cart-header">
+            <h2>Your Order</h2>
+            <button id="close-cart" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="cart-items-container" class="cart-items-container">
+            <p class="empty-cart-msg">Your cart is empty.</p>
+        </div>
+        <div class="cart-footer">
+            <div class="cart-total-row">
+                <span>Total:</span>
+                <span id="cart-total-price">$0.00</span>
+            </div>
+            <button id="checkout-btn" class="checkout-btn">Proceed to Checkout</button>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div id="checkout-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel">
+            <button id="close-checkout" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+            <div class="modal-header">
+                <h2>Checkout</h2>
+                <p class="tagline">Review your order and select a payment method.</p>
+            </div>
+            <div class="modal-body">
+                <div class="checkout-summary">
+                    <div class="summary-row"><span>Subtotal</span><span id="checkout-subtotal">$0.00</span></div>
+                    <div class="summary-row"><span>Delivery Fees</span><span id="checkout-delivery-fee">$0.00</span>
+                    </div>
+                    <div class="summary-row total"><span>Total</span><span id="checkout-total">$0.00</span></div>
+                </div>
+
+                <h3 class="payment-title">Select Payment Method</h3>
+                <div class="payment-methods">
+                    <button class="payment-btn apple-pay" onclick="window.processPayment('Apple Pay')">
+                        <i class="fa-brands fa-apple"></i> Pay
+                    </button>
+                    <button class="payment-btn credit-card" onclick="window.processPayment('Credit Card')">
+                        <i class="fa-regular fa-credit-card"></i> Credit Card
+                    </button>
+                    <button class="payment-btn debit-card" onclick="window.processPayment('Debit Card')">
+                        <i class="fa-solid fa-building-columns"></i> Debit Card
+                    </button>
+                </div>
+                <div id="payment-spinner" class="payment-spinner hidden">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Processing Payment...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice & Tracker Modal -->
+    <div id="invoice-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel" style="max-width: 700px;">
+            <button id="close-invoice" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+            <div class="modal-header" style="text-align:center; border-bottom: none;">
+                <div class="success-icon"><i class="fa-solid fa-circle-check"></i></div>
+                <h2 style="color: #26de81;">Payment Successful!</h2>
+                <p class="tagline">Your order has been placed via <span id="invoice-payment-method"
+                        style="color:#fff;">Apple Pay</span>.</p>
+                <div class="invoice-total">Total Paid: <span id="invoice-total-paid">$0.00</span></div>
+            </div>
+
+            <div class="modal-body">
+                <h3 class="host-section-title">Order Status</h3>
+                <div id="tracker-container" class="tracker-container">
+                    <!-- Tracker items injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Driver Selection Modal -->
+    <div id="driver-login-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel" style="max-width: 500px;">
+            <button id="close-driver-login" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+            <div class="modal-header">
+                <h2>Driver Portal Login</h2>
+                <p class="tagline">Select your driver profile to start your shifts.</p>
+            </div>
+            <div class="modal-body">
+                <div id="driver-login-list" class="host-login-list"
+                    style="display:flex; flex-direction:column; gap:0.8rem;">
+                    <!-- Driver items injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Host Selection Modal -->
+    <div id="host-login-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel" style="max-width: 500px;">
+            <button id="close-host-login" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+            <div class="modal-header">
+                <h2>Host Portal Login</h2>
+                <p class="tagline">Select your host profile to view your restaurant orders.</p>
+            </div>
+            <div class="modal-body">
+                <div id="host-login-list" class="host-login-list"
+                    style="display:flex; flex-direction:column; gap:0.8rem;">
+                    <!-- Host items injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
